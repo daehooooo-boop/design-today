@@ -1,0 +1,88 @@
+{
+  "date": "2026-06-16",
+  "captured_at_kst": "07:30",
+  "domestic": {
+    "design": [
+      {
+        "title": "디자인나침반 박종민 대표, AI 시대 UX는 '결과를 어떻게 보여주는가'가 핵심 변수",
+        "summary": "잠실 광고문화회관 세미나에 앞선 인터뷰에서, 텍스트 응답만으로는 정보 전달에 한계가 있어 결과 표현 방식과 개인화가 2026년 UX의 두 축이 될 것이라고 진단했다.",
+        "source": "전자신문(다음뉴스)",
+        "link": "https://v.daum.net/v/20251217110749436?f=p"
+      },
+      {
+        "title": "디자인DB, 연 100만 방문 규모 국내 최대 디자인정보 포털로 국내·해외 뉴스 동시 운영",
+        "summary": "국내 디자인뉴스와 해외 디자인뉴스를 분리된 카테고리로 제공하며, 트렌드·리포트·통계까지 아우르는 누적 콘텐츠 36만 건 규모의 포털이라고 소개한다.",
+        "source": "designdb.com",
+        "link": "https://www.designdb.com"
+      },
+      {
+        "title": "전자신문, 하반기 '바이브 시대 UX·UI' 세미나 예고…AI 네이티브 실무 전략 다뤄",
+        "summary": "비개발자 대상 Claude Code 바이브 코딩 부트캠프와 함께, 2026년 하반기 UX·UI 트렌드 세미나가 행사 목록에 함께 올라와 있다.",
+        "source": "전자신문",
+        "link": "https://m.etnews.com"
+      }
+    ],
+    "it": [
+      {
+        "title": "전자신문, 첫 글로벌 6G 연합체 연말 출범 전망…한국 주도권 확보 기대",
+        "summary": "연말 출범이 예고된 6G 국제 연합체에서 한국이 초기 표준 논의를 주도할 수 있을지가 관전 포인트로 제시됐다.",
+        "source": "전자신문",
+        "link": "https://m.etnews.com"
+      },
+      {
+        "title": "KAIST, 반도체 칩 내부 액체냉각 구조로 AI 데이터센터 냉각 전력 10분의 1 절감 기술 발표",
+        "summary": "기계공학과·AX학과 공동 연구팀이 매니폴드와 마이크로채널을 결합한 새 냉각 구조를 16일 공개했다고 전했다.",
+        "source": "다음뉴스 IT",
+        "link": "https://news.daum.net/tech"
+      },
+      {
+        "title": "삼성전자, 16~18일 글로벌전략회의 개최…하반기 사업 방향 논의",
+        "summary": "사업부별 글로벌 전략회의를 통해 하반기 주요 사업 방향을 점검할 예정이라고 보도됐다.",
+        "source": "전자신문",
+        "link": "https://m.etnews.com"
+      }
+    ]
+  },
+  "global": {
+    "design": [
+      {
+        "title": "Tubik Studio, 2026 UI 트렌드 키워드로 'AI 코파일럿'과 신뢰를 위한 의도적 모션 제시",
+        "summary": "AI를 모든 것을 아는 자동조종자가 아닌, 맥락을 존중하는 보조자로 재배치하는 흐름과, 신뢰감을 주기 위해 의도적으로 마찰을 되돌려 놓는 모션 설계를 핵심 트렌드로 짚었다.",
+        "source": "Tubik Blog",
+        "link": "https://blog.tubikstudio.com/ui-design-trends-2026/"
+      },
+      {
+        "title": "Envato Elements, 2026 UX 무드는 '차분한 인터페이스'…시각적 과잉의 시대는 끝났다",
+        "summary": "글래스모피즘과 화려한 그라디언트 중심의 실험적 비주얼에서 벗어나, 인지 부담을 줄이는 단순하고 차분한 흐름으로 무게중심이 옮겨가고 있다고 분석했다.",
+        "source": "Envato Elements",
+        "link": "https://elements.envato.com/learn/ux-ui-design-trends"
+      },
+      {
+        "title": "UXPin, 2026 12대 UX 트렌드 발표…디자인 토큰을 '보편 언어'로 규정",
+        "summary": "실제 컴포넌트 라이브러리 기반 AI 디자인 생성, 거버넌스 플랫폼화된 디자인 시스템, 디자인-엔지니어링 융합 등을 포함한 12가지 흐름을 제시했다.",
+        "source": "UXPin",
+        "link": "https://www.uxpin.com/studio/blog/ui-ux-design-trends/"
+      }
+    ],
+    "it": [
+      {
+        "title": "테크스타트업스, 'AI 인프라 경쟁' 가속…중국은 자체 반도체·모델 스택 구축에 속도",
+        "summary": "빅테크가 막대한 AI 투자를 실제 수익으로 전환해야 한다는 압박을 받는 가운데, AI가 일자리와 권력 구조를 재편하는 균열도 가시화되고 있다고 진단했다.",
+        "source": "TechStartups",
+        "link": "https://techstartups.com/2026/06/15/top-tech-news-today-june-15-2026/"
+      },
+      {
+        "title": "구글, AI 데이터센터 물 사용 투명성 강화…2030년까지 '워터 포지티브' 목표",
+        "summary": "전력·용수 사용 증가에 대한 지역사회 반발이 커지는 가운데, 지역 단위 투명성 확대와 인프라 투자를 포함한 다섯 가지 물 사용 공약을 발표했다고 전했다.",
+        "source": "TechStartups (via The Verge)",
+        "link": "https://techstartups.com/2026/06/05/top-tech-news-today-june-5-2026/"
+      },
+      {
+        "title": "SpaceX 역대 최대 규모 IPO 가격 책정 속, 물리적 AI·휴머노이드 로봇 투자도 동반 가속",
+        "summary": "독일과 바르셀로나 등지에서 피지컬 AI에 대한 투자가 이어지고, 엔비디아의 중국 재진입 행보 등 인프라 경쟁이 소프트웨어를 넘어 물리적 자원 확보 경쟁으로 옮겨가고 있다고 분석했다.",
+        "source": "TechStartups",
+        "link": "https://techstartups.com/2026/06/12/top-tech-news-today-june-12-2026/"
+      }
+    ]
+  }
+}
