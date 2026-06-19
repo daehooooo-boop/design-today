@@ -1,16 +1,16 @@
 // scripts/research.mjs
 // 매일 GitHub Actions가 이 스크립트를 실행합니다 (.github/workflows/daily-research.yml).
 // 실행 결과: public/data/{YYYY-MM-DD}.json 생성 + public/data/dates.json 갱신
+// API 없이 RSS 피드만 사용 — 완전 무료
 //
 // 로컬 테스트:
-//   GEMINI_API_KEY=AIza... npm run research
-//   GEMINI_API_KEY=AIza... node scripts/research.mjs 2026-06-17   (날짜 수동 지정)
+//   npm run research
+//   node scripts/research.mjs 2026-06-17   (날짜 수동 지정)
 
 import { writeFile, readFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 
 const DATA_DIR = path.resolve('public/data')
-const MODEL = 'gemini-2.0-flash'
 
 function todayKST() {
   const now = new Date()
@@ -20,105 +20,125 @@ function todayKST() {
 
 const targetDate = process.argv[2] || todayKST()
 
-const SYSTEM_PROMPT = `너는 디자인·IT 전문 뉴스클리퍼다. 오늘(${targetDate}, 한국시간 기준) 발행되거나 갱신된
-디자인 뉴스와 IT 뉴스를 웹 검색으로 조사한다.
-
-반드시 다음 4개 카테고리를 모두 채운다:
-1. 국내 디자인 (한국어권 디자인/UX/UI/브랜딩 소식)
-2. 국내 IT (한국 IT/테크 기업·산업 소식)
-3. 해외 디자인 (영어권 등 해외 디자인/UX/UI 소식)
-4. 해외 IT (해외 빅테크/스타트업/기술 산업 소식)
-
-각 카테고리마다 오늘 기준으로 가장 의미 있는 항목 3개를 고른다.
-각 항목은 다음 필드를 가진 JSON 객체로 작성한다:
-- title: 헤드라인 (한국어로, 30자 내외)
-- summary: 핵심 내용 1~2문장 요약 (한국어, 출처 원문을 그대로 베끼지 말고 직접 풀어서 서술)
-- source: 매체/사이트명
-- link: 실제 원문 URL (검색으로 확인한 정확한 URL만 사용. 추측 금지)
-
-출력 형식 규칙 (매우 중요):
-- 오직 아래 스키마의 JSON 객체 하나만 출력한다.
-- 마크다운 코드펜스(\`\`\`)나 설명 문장을 절대 포함하지 않는다.
-- 확인되지 않는 URL은 만들어내지 말고, 검색 결과에서 실제로 확인된 링크만 사용한다.
-
-스키마:
-{
-  "date": "${targetDate}",
-  "captured_at_kst": "07:30",
-  "domestic": { "design": [ {title, summary, source, link} x3 ], "it": [ ... x3 ] },
-  "global":   { "design": [ {title, summary, source, link} x3 ], "it": [ ... x3 ] }
-}`
-
-async function callGemini() {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY 환경변수가 설정되어 있지 않습니다.')
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: `${targetDate} 기준 오늘의 디자인·IT 뉴스를 조사해서 스키마대로 JSON만 응답해줘.` }],
-        },
-      ],
-      tools: [{ google_search: {} }],
-      generationConfig: { temperature: 0.2 },
-    }),
-  })
-
-  if (!response.ok) {
-    const errText = await response.text()
-    throw new Error(`Gemini API 오류 (${response.status}): ${errText}`)
-  }
-
-  const data = await response.json()
-  const text = data.candidates?.[0]?.content?.parts
-    ?.filter((p) => p.text)
-    ?.map((p) => p.text)
-    ?.join('\n')
-    ?.trim()
-
-  if (!text) {
-    throw new Error('응답에서 텍스트를 찾지 못했습니다.')
-  }
-
-  return text
+// RSS 소스 목록 (카테고리별 여러 피드 → 합산 후 상위 3개 선택)
+const SOURCES = {
+  domestic: {
+    design: [
+      { url: 'https://magazine.contenta.co/feed/', name: 'Contenta M' },
+      { url: 'https://feeds.feedburner.com/bloter', name: '블로터' },
+    ],
+    it: [
+      { url: 'https://feeds.feedburner.com/bloter', name: '블로터' },
+      { url: 'https://www.aitimes.com/rss/allArticle.xml', name: 'AI타임스' },
+    ],
+  },
+  global: {
+    design: [
+      { url: 'https://www.smashingmagazine.com/feed/', name: 'Smashing Magazine' },
+      { url: 'https://uxdesign.cc/feed', name: 'UX Collective' },
+      { url: 'https://www.designboom.com/feed/', name: 'Designboom' },
+    ],
+    it: [
+      { url: 'https://feeds.feedburner.com/TechCrunch/', name: 'TechCrunch' },
+      { url: 'https://www.theverge.com/rss/index.xml', name: 'The Verge' },
+    ],
+  },
 }
 
-function parseModelOutput(raw) {
-  const cleaned = raw.replace(/^```json\s*|^```\s*|```$/gm, '').trim()
-  let parsed
-  try {
-    parsed = JSON.parse(cleaned)
-  } catch (err) {
-    throw new Error(`JSON 파싱 실패: ${err.message}\n--- 원본 응답 ---\n${cleaned}`)
+// XML에서 태그 값 추출 (CDATA 포함)
+function extractTag(xml, tag) {
+  const cdata = xml.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`, 'i'))
+  if (cdata) return cdata[1].trim()
+  const plain = xml.match(new RegExp(`<${tag}[^>]*>([^<]*)<\\/${tag}>`, 'i'))
+  if (plain) return plain[1].trim()
+  // <link> 는 self-closing Atom 스타일도 있음
+  if (tag === 'link') {
+    const atom = xml.match(/<link[^>]+href=["']([^"']+)["']/i)
+    if (atom) return atom[1].trim()
   }
+  return ''
+}
 
-  for (const region of ['domestic', 'global']) {
-    if (!parsed[region]) throw new Error(`'${region}' 키가 없습니다.`)
-    for (const cat of ['design', 'it']) {
-      if (!Array.isArray(parsed[region][cat])) {
-        throw new Error(`'${region}.${cat}' 가 배열이 아닙니다.`)
-      }
+function stripHtml(html) {
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function truncate(str, maxLen = 120) {
+  if (!str || str.length <= maxLen) return str
+  return str.slice(0, maxLen).trimEnd() + '…'
+}
+
+function parseRSS(xml, sourceName) {
+  const items = []
+  const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi
+  let m
+  while ((m = itemRegex.exec(xml)) !== null) {
+    const block = m[1]
+    const title = stripHtml(extractTag(block, 'title'))
+    const rawLink = extractTag(block, 'link') || extractTag(block, 'guid')
+    const link = rawLink.startsWith('http') ? rawLink : ''
+    const desc = truncate(stripHtml(extractTag(block, 'description')))
+    const pubDate = extractTag(block, 'pubDate') || extractTag(block, 'dc:date') || ''
+
+    if (title && link) {
+      items.push({ title, summary: desc || title, source: sourceName, link, pubDate })
     }
   }
+  return items
+}
 
-  return parsed
+async function fetchFeed(feedUrl, sourceName) {
+  try {
+    const res = await fetch(feedUrl, {
+      headers: { 'User-Agent': 'design-today-bot/1.0' },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (!res.ok) return []
+    const xml = await res.text()
+    return parseRSS(xml, sourceName)
+  } catch {
+    console.warn(`[design-today] 피드 스킵: ${feedUrl}`)
+    return []
+  }
+}
+
+// 여러 피드에서 아이템을 수집하고 최신 3개 반환
+async function collectItems(feeds) {
+  const all = (await Promise.all(feeds.map((f) => fetchFeed(f.url, f.name)))).flat()
+  // pubDate 기준 정렬 (없으면 원래 순서 유지)
+  all.sort((a, b) => {
+    const da = a.pubDate ? new Date(a.pubDate).getTime() : 0
+    const db = b.pubDate ? new Date(b.pubDate).getTime() : 0
+    return db - da
+  })
+  // title 중복 제거 후 3개
+  const seen = new Set()
+  const result = []
+  for (const item of all) {
+    if (!seen.has(item.title)) {
+      seen.add(item.title)
+      result.push({ title: item.title, summary: item.summary, source: item.source, link: item.link })
+      if (result.length === 3) break
+    }
+  }
+  return result
 }
 
 async function updateDatesIndex(date) {
   const indexPath = path.join(DATA_DIR, 'dates.json')
   let dates = []
   try {
-    const raw = await readFile(indexPath, 'utf-8')
-    dates = JSON.parse(raw)
+    dates = JSON.parse(await readFile(indexPath, 'utf-8'))
   } catch {
     dates = []
   }
@@ -128,16 +148,29 @@ async function updateDatesIndex(date) {
 }
 
 async function main() {
-  console.log(`[design-today] ${targetDate} 리서치 시작...`)
-  const raw = await callGemini()
-  const parsed = parseModelOutput(raw)
+  console.log(`[design-today] ${targetDate} 리서치 시작 (RSS 모드)...`)
+
+  const [domDesign, domIT, glbDesign, glbIT] = await Promise.all([
+    collectItems(SOURCES.domestic.design),
+    collectItems(SOURCES.domestic.it),
+    collectItems(SOURCES.global.design),
+    collectItems(SOURCES.global.it),
+  ])
+
+  const output = {
+    date: targetDate,
+    captured_at_kst: '07:30',
+    domestic: { design: domDesign, it: domIT },
+    global: { design: glbDesign, it: glbIT },
+  }
 
   await mkdir(DATA_DIR, { recursive: true })
   const outPath = path.join(DATA_DIR, `${targetDate}.json`)
-  await writeFile(outPath, JSON.stringify(parsed, null, 2) + '\n', 'utf-8')
+  await writeFile(outPath, JSON.stringify(output, null, 2) + '\n', 'utf-8')
   await updateDatesIndex(targetDate)
 
-  console.log(`[design-today] 완료: ${outPath}`)
+  const total = domDesign.length + domIT.length + glbDesign.length + glbIT.length
+  console.log(`[design-today] 완료: ${outPath} (총 ${total}개 아이템)`)
 }
 
 main().catch((err) => {
