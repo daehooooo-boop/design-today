@@ -3,14 +3,14 @@
 // 실행 결과: public/data/{YYYY-MM-DD}.json 생성 + public/data/dates.json 갱신
 //
 // 로컬 테스트:
-//   ANTHROPIC_API_KEY=sk-ant-... npm run research
-//   ANTHROPIC_API_KEY=sk-ant-... node scripts/research.mjs 2026-06-17   (날짜 수동 지정)
+//   GEMINI_API_KEY=AIza... npm run research
+//   GEMINI_API_KEY=AIza... node scripts/research.mjs 2026-06-17   (날짜 수동 지정)
 
 import { writeFile, readFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 
 const DATA_DIR = path.resolve('public/data')
-const MODEL = 'claude-sonnet-4-6'
+const MODEL = 'gemini-2.0-flash'
 
 function todayKST() {
   const now = new Date()
@@ -49,53 +49,50 @@ const SYSTEM_PROMPT = `너는 디자인·IT 전문 뉴스클리퍼다. 오늘(${
   "global":   { "design": [ {title, summary, source, link} x3 ], "it": [ ... x3 ] }
 }`
 
-async function callClaude() {
-  const apiKey = process.env.ANTHROPIC_API_KEY
+async function callGemini() {
+  const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY 환경변수가 설정되어 있지 않습니다.')
+    throw new Error('GEMINI_API_KEY 환경변수가 설정되어 있지 않습니다.')
   }
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`
+
+  const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [
+      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [
         {
           role: 'user',
-          content: `${targetDate} 기준 오늘의 디자인·IT 뉴스를 조사해서 스키마대로 JSON만 응답해줘.`,
+          parts: [{ text: `${targetDate} 기준 오늘의 디자인·IT 뉴스를 조사해서 스키마대로 JSON만 응답해줘.` }],
         },
       ],
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+      tools: [{ google_search: {} }],
+      generationConfig: { temperature: 0.2 },
     }),
   })
 
   if (!response.ok) {
     const errText = await response.text()
-    throw new Error(`Anthropic API 오류 (${response.status}): ${errText}`)
+    throw new Error(`Gemini API 오류 (${response.status}): ${errText}`)
   }
 
   const data = await response.json()
+  const text = data.candidates?.[0]?.content?.parts
+    ?.filter((p) => p.text)
+    ?.map((p) => p.text)
+    ?.join('\n')
+    ?.trim()
 
-  const textBlocks = (data.content || [])
-    .filter((block) => block.type === 'text')
-    .map((block) => block.text)
-
-  if (textBlocks.length === 0) {
-    throw new Error('응답에서 텍스트 블록을 찾지 못했습니다.')
+  if (!text) {
+    throw new Error('응답에서 텍스트를 찾지 못했습니다.')
   }
 
-  return textBlocks.join('\n').trim()
+  return text
 }
 
 function parseModelOutput(raw) {
-  // 모델이 코드펜스를 붙였을 경우를 대비한 안전장치
   const cleaned = raw.replace(/^```json\s*|^```\s*|```$/gm, '').trim()
   let parsed
   try {
@@ -132,7 +129,7 @@ async function updateDatesIndex(date) {
 
 async function main() {
   console.log(`[design-today] ${targetDate} 리서치 시작...`)
-  const raw = await callClaude()
+  const raw = await callGemini()
   const parsed = parseModelOutput(raw)
 
   await mkdir(DATA_DIR, { recursive: true })
